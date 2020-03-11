@@ -413,6 +413,11 @@ impl Error {
         process::exit(0);
     }
 
+    /// Writes the error message to the writer.
+    pub fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        write!(w, "{}", self.message)
+    }
+
     pub(crate) fn argument_conflict<O, U>(
         arg: &Arg,
         other: Option<O>,
