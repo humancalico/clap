@@ -9,16 +9,15 @@ use atty;
 use std::env;
 use std::fmt;
 
-#[doc(hidden)]
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum ColorWhen {
+pub(crate) enum ColorWhen {
     Auto,
     Always,
     Never,
 }
 
 #[cfg(feature = "color")]
-pub fn is_a_tty(stderr: bool) -> bool {
+pub(crate) fn is_a_tty(stderr: bool) -> bool {
     debugln!("is_a_tty: stderr={:?}", stderr);
     let stream = if stderr {
         atty::Stream::Stderr
@@ -29,23 +28,21 @@ pub fn is_a_tty(stderr: bool) -> bool {
 }
 
 #[cfg(not(feature = "color"))]
-pub fn is_a_tty(_: bool) -> bool {
+pub(crate) fn is_a_tty(_: bool) -> bool {
     debugln!("is_a_tty;");
     false
 }
 
-pub fn is_term_dumb() -> bool {
+pub(crate) fn is_term_dumb() -> bool {
     env::var("TERM").ok() == Some(String::from("dumb"))
 }
 
-#[doc(hidden)]
-pub struct ColorizerOption {
-    pub use_stderr: bool,
-    pub when: ColorWhen,
+pub(crate) struct ColorizerOption {
+    pub(crate) use_stderr: bool,
+    pub(crate) when: ColorWhen,
 }
 
-#[doc(hidden)]
-pub struct Colorizer {
+pub(crate) struct Colorizer {
     when: ColorWhen,
 }
 
@@ -60,7 +57,7 @@ macro_rules! color {
 }
 
 impl Colorizer {
-    pub fn new(option: &ColorizerOption) -> Colorizer {
+    pub(crate) fn new(option: &ColorizerOption) -> Colorizer {
         let is_a_tty = is_a_tty(option.use_stderr);
         let is_term_dumb = is_term_dumb();
         Colorizer {
@@ -72,7 +69,7 @@ impl Colorizer {
         }
     }
 
-    pub fn good<T>(&self, msg: T) -> Format<T>
+    pub(crate) fn good<T>(&self, msg: T) -> Format<T>
     where
         T: fmt::Display + AsRef<str>,
     {
@@ -80,7 +77,7 @@ impl Colorizer {
         color!(self, Good, msg)
     }
 
-    pub fn warning<T>(&self, msg: T) -> Format<T>
+    pub(crate) fn warning<T>(&self, msg: T) -> Format<T>
     where
         T: fmt::Display + AsRef<str>,
     {
@@ -88,7 +85,7 @@ impl Colorizer {
         color!(self, Warning, msg)
     }
 
-    pub fn error<T>(&self, msg: T) -> Format<T>
+    pub(crate) fn error<T>(&self, msg: T) -> Format<T>
     where
         T: fmt::Display + AsRef<str>,
     {
@@ -96,7 +93,7 @@ impl Colorizer {
         color!(self, Error, msg)
     }
 
-    pub fn none<T>(&self, msg: T) -> Format<T>
+    pub(crate) fn none<T>(&self, msg: T) -> Format<T>
     where
         T: fmt::Display + AsRef<str>,
     {
@@ -117,8 +114,7 @@ impl Default for Colorizer {
 /// Defines styles for different types of error messages. Defaults to Error=Red, Warning=Yellow,
 /// and Good=Green
 #[derive(Debug)]
-#[doc(hidden)]
-pub enum Format<T> {
+pub(crate) enum Format<T> {
     /// Defines the style used for errors, defaults to Red
     Error(T),
     /// Defines the style used for warnings, defaults to Yellow

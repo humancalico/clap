@@ -8,7 +8,7 @@ use std::process;
 use std::result::Result as StdResult;
 
 // Internal
-use crate::build::{Arg, ArgGroup};
+use crate::build::Arg;
 use crate::output::fmt::{ColorWhen, Colorizer, ColorizerOption};
 use crate::parse::features::suggestions;
 
@@ -413,68 +413,12 @@ impl Error {
         process::exit(0);
     }
 
-    #[doc(hidden)]
-    pub fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
-        write!(w, "{}", self.message)
-    }
-
-    #[doc(hidden)]
-    pub fn group_conflict<O, U>(
-        group: &ArgGroup,
+    pub(crate) fn argument_conflict<O, U>(
+        arg: &Arg,
         other: Option<O>,
         usage: U,
         color: ColorWhen,
     ) -> Self
-    where
-        O: Into<String>,
-        U: Display,
-    {
-        let mut v = vec![group.name.to_owned()];
-        let c = Colorizer::new(&ColorizerOption {
-            use_stderr: true,
-            when: color,
-        });
-        let (plain_cause, colored_cause) = match other {
-            Some(name) => {
-                let n = name.into();
-                v.push(n.clone());
-                (
-                    format!("The argument '{}' cannot be used with '{}'", group.name, n),
-                    format!(
-                        "The argument '{}' cannot be used with '{}'",
-                        group.name,
-                        c.warning(n)
-                    ),
-                )
-            }
-            None => {
-                let n = "one or more of the other specified arguments";
-                (
-                    format!("The argument '{}' cannot be used with {}", group.name, n),
-                    format!(
-                        "The argument '{}' cannot be used with {}",
-                        group.name,
-                        c.none(n)
-                    ),
-                )
-            }
-        };
-        Error {
-            cause: plain_cause,
-            message: format!(
-                "{} {}\n\n{}\n\nFor more information try {}",
-                c.error("error:"),
-                colored_cause,
-                usage,
-                c.good("--help")
-            ),
-            kind: ErrorKind::ArgumentConflict,
-            info: Some(v),
-        }
-    }
-
-    #[doc(hidden)]
-    pub fn argument_conflict<O, U>(arg: &Arg, other: Option<O>, usage: U, color: ColorWhen) -> Self
     where
         O: Into<String>,
         U: Display,
@@ -523,8 +467,7 @@ impl Error {
         }
     }
 
-    #[doc(hidden)]
-    pub fn empty_value<U>(arg: &Arg, usage: U, color: ColorWhen) -> Self
+    pub(crate) fn empty_value<U>(arg: &Arg, usage: U, color: ColorWhen) -> Self
     where
         U: Display,
     {
@@ -552,8 +495,7 @@ impl Error {
         }
     }
 
-    #[doc(hidden)]
-    pub fn invalid_value<B, G, U>(
+    pub(crate) fn invalid_value<B, G, U>(
         bad_val: B,
         good_vals: &[G],
         arg: &Arg,
@@ -605,8 +547,7 @@ impl Error {
         }
     }
 
-    #[doc(hidden)]
-    pub fn invalid_subcommand<S, D, N, U>(
+    pub(crate) fn invalid_subcommand<S, D, N, U>(
         subcmd: S,
         did_you_mean: D,
         name: N,
@@ -647,8 +588,7 @@ impl Error {
         }
     }
 
-    #[doc(hidden)]
-    pub fn unrecognized_subcommand<S, N>(subcmd: S, name: N, color: ColorWhen) -> Self
+    pub(crate) fn unrecognized_subcommand<S, N>(subcmd: S, name: N, color: ColorWhen) -> Self
     where
         S: Into<String>,
         N: Display,
@@ -676,8 +616,7 @@ impl Error {
         }
     }
 
-    #[doc(hidden)]
-    pub fn missing_required_argument<R, U>(required: R, usage: U, color: ColorWhen) -> Self
+    pub(crate) fn missing_required_argument<R, U>(required: R, usage: U, color: ColorWhen) -> Self
     where
         R: Display,
         U: Display,
@@ -705,8 +644,7 @@ impl Error {
         }
     }
 
-    #[doc(hidden)]
-    pub fn missing_subcommand<N, U>(name: N, usage: U, color: ColorWhen) -> Self
+    pub(crate) fn missing_subcommand<N, U>(name: N, usage: U, color: ColorWhen) -> Self
     where
         N: AsRef<str> + Display,
         U: Display,
@@ -731,8 +669,7 @@ impl Error {
         }
     }
 
-    #[doc(hidden)]
-    pub fn invalid_utf8<U>(usage: U, color: ColorWhen) -> Self
+    pub(crate) fn invalid_utf8<U>(usage: U, color: ColorWhen) -> Self
     where
         U: Display,
     {
@@ -755,8 +692,7 @@ impl Error {
         }
     }
 
-    #[doc(hidden)]
-    pub fn too_many_values<V, U>(val: V, arg: &Arg, usage: U, color: ColorWhen) -> Self
+    pub(crate) fn too_many_values<V, U>(val: V, arg: &Arg, usage: U, color: ColorWhen) -> Self
     where
         V: AsRef<str> + Display + ToOwned,
         U: Display,
@@ -787,8 +723,7 @@ impl Error {
         }
     }
 
-    #[doc(hidden)]
-    pub fn too_few_values<U>(
+    pub(crate) fn too_few_values<U>(
         arg: &Arg,
         min_vals: u64,
         curr_vals: usize,
@@ -826,8 +761,7 @@ impl Error {
         }
     }
 
-    #[doc(hidden)]
-    pub fn value_validation(arg: Option<&Arg>, err: &str, color: ColorWhen) -> Self {
+    pub(crate) fn value_validation(arg: Option<&Arg>, err: &str, color: ColorWhen) -> Self {
         let c = Colorizer::new(&ColorizerOption {
             use_stderr: true,
             when: color,
@@ -857,14 +791,7 @@ impl Error {
         }
     }
 
-    #[doc(hidden)]
-    pub fn value_validation_auto(err: &str) -> Self {
-        let n: Option<&Arg> = None;
-        Error::value_validation(n, err, ColorWhen::Auto)
-    }
-
-    #[doc(hidden)]
-    pub fn wrong_number_of_values<U>(
+    pub(crate) fn wrong_number_of_values<U>(
         arg: &Arg,
         num_vals: u64,
         curr_vals: usize,
@@ -902,8 +829,7 @@ impl Error {
         }
     }
 
-    #[doc(hidden)]
-    pub fn unexpected_multiple_usage<U>(arg: &Arg, usage: U, color: ColorWhen) -> Self
+    pub(crate) fn unexpected_multiple_usage<U>(arg: &Arg, usage: U, color: ColorWhen) -> Self
     where
         U: Display,
     {
@@ -931,8 +857,7 @@ impl Error {
         }
     }
 
-    #[doc(hidden)]
-    pub fn unknown_argument<A, U>(
+    pub(crate) fn unknown_argument<A, U>(
         arg: A,
         did_you_mean: Option<String>,
         usage: U,
@@ -974,42 +899,6 @@ impl Error {
                 c.good("--help")
             ),
             kind: ErrorKind::UnknownArgument,
-            info: Some(vec![a]),
-        }
-    }
-
-    #[doc(hidden)]
-    pub fn io_error(e: &Error, color: ColorWhen) -> Self {
-        let c = Colorizer::new(&ColorizerOption {
-            use_stderr: true,
-            when: color,
-        });
-        Error {
-            cause: e.to_string(),
-            message: format!("{} {}", c.error("error:"), e),
-            kind: ErrorKind::Io,
-            info: None,
-        }
-    }
-
-    #[doc(hidden)]
-    pub fn argument_not_found_auto<A>(arg: A) -> Self
-    where
-        A: Into<String>,
-    {
-        let a = arg.into();
-        let c = Colorizer::new(&ColorizerOption {
-            use_stderr: true,
-            when: ColorWhen::Auto,
-        });
-        Error {
-            cause: format!("The argument '{}' wasn't found", a),
-            message: format!(
-                "{} The argument '{}' wasn't found",
-                c.error("error:"),
-                a.clone()
-            ),
-            kind: ErrorKind::ArgumentNotFound,
             info: Some(vec![a]),
         }
     }
